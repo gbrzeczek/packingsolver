@@ -1,0 +1,85 @@
+name: Release Linux Binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name (optional, defaults to tag name)'
+        required: false
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install liblapack-dev libbz2-dev
+
+    - name: Build
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release --parallel
+        cmake --install build --config Release --prefix install
+
+    - name: Package binaries
+      run: |
+        cd install/bin
+        tar -czf ../../packingsolver-linux-x86_64.tar.gz *
+        cd ../..
+
+    - name: Generate checksums
+      run: |
+        sha256sum packingsolver-linux-x86_64.tar.gz > checksums.txt
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ inputs.tag_name }}
+        name: ${{ inputs.release_name || inputs.tag_name }}
+        prerelease: ${{ inputs.prerelease }}
+        files: |
+          packingsolver-linux-x86_64.tar.gz
+          checksums.txt
+        body: |
+          ## PackingSolver Linux Binaries
+
+          This release contains pre-built Linux (x86_64) binaries for PackingSolver.
+
+          ### Included Binaries
+          - `packingsolver_box`
+          - `packingsolver_boxstacks`
+          - `packingsolver_irregular`
+          - `packingsolver_onedimensional`
+          - `packingsolver_rectangle`
+          - `packingsolver_rectangleguillotine`
+
+          ### Installation
+          ```bash
+          tar -xzf packingsolver-linux-x86_64.tar.gz
+          chmod +x packingsolver_*
+          # Optionally move to PATH
+          sudo mv packingsolver_* /usr/local/bin/
+          ```
+
+          ### Verification
+          Check the SHA256 checksums:
+          ```bash
+          sha256sum -c checksums.txt
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
