@@ -749,9 +749,16 @@ void BranchingScheme::insertion_item(
     Length yj = item_type.y(rotate);
     Length xi = bin_type.rect.x;
     Length yi = bin_type.rect.y;
+    Length item_spacing_y = instance.parameters().item_spacing_y;
     Length ys;
     if (uncovered_item_pos > 0) {
         ys = parent->uncovered_items[uncovered_item_pos].ys;
+        // Add y-spacing if there's an item below (not bin edge)
+        // Check if the previous uncovered item has an actual item
+        if (uncovered_item_pos > 0
+                && parent->uncovered_items[uncovered_item_pos - 1].item_type_id != -1) {
+            ys += item_spacing_y;
+        }
     } else if (defect_id != -1) {
         ys = bin_type.defects[defect_id].y_end();
     } else {  // new bin.
@@ -770,12 +777,17 @@ void BranchingScheme::insertion_item(
 
     // Compute xs.
     Length xs = 0;
+    Length item_spacing_x = instance.parameters().item_spacing_x;
     if (new_bin == 0) {
         for (const UncoveredItem& uncovered_item: parent->uncovered_items) {
             if (uncovered_item.ye <= ys || uncovered_item.ys >= ye)
                 continue;
-            if (xs < uncovered_item.xe)
-                xs = uncovered_item.xe;
+            // Add item_spacing_x after items (but not after bin edge, i.e. xe=0)
+            Length xe_with_spacing = uncovered_item.xe;
+            if (uncovered_item.xe > 0)
+                xe_with_spacing += item_spacing_x;
+            if (xs < xe_with_spacing)
+                xs = xe_with_spacing;
         }
     }
 
@@ -904,11 +916,23 @@ void BranchingScheme::insertion_item_fixed(
     if (last_bin_weight > bin_type.maximum_weight * PSTOL)
         return;
 
-    // Check intersections with other packed items.
+    // Check intersections with other packed items (including spacing).
+    Length item_spacing_x = instance.parameters().item_spacing_x;
+    Length item_spacing_y = instance.parameters().item_spacing_y;
     for (const UncoveredItem& uncovered_item: parent->uncovered_items) {
-        if (uncovered_item.ye <= ys || uncovered_item.ys >= ye)
+        // Account for y-spacing: items must be separated by item_spacing_y
+        Length effective_ye = uncovered_item.ye;
+        Length effective_ys = uncovered_item.ys;
+        if (uncovered_item.item_type_id != -1) {
+            effective_ye += item_spacing_y;
+        }
+        if (effective_ye <= ys || effective_ys >= ye)
             continue;
-        if (xs < uncovered_item.xe) {
+        // Account for x-spacing: items must be separated by item_spacing_x
+        Length xe_with_spacing = uncovered_item.xe;
+        if (uncovered_item.xe > 0)
+            xe_with_spacing += item_spacing_x;
+        if (xs < xe_with_spacing) {
             //std::cout << "xe " << xe << std::endl;
             return;
         }

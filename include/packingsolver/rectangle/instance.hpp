@@ -241,6 +241,22 @@ struct Parameters
      * to a larger or equal group.
      */
     std::vector<bool> check_weight_constraints;
+
+    /**
+     * Spacing between items in the x direction.
+     *
+     * This models the situation when items cannot touch each other, for example
+     * due to cut thickness or required gaps between items.
+     */
+    Length item_spacing_x = 0;
+
+    /**
+     * Spacing between items in the y direction.
+     *
+     * This models the situation when items cannot touch each other, for example
+     * due to cut thickness or required gaps between items.
+     */
+    Length item_spacing_y = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -190,6 +190,8 @@ std::ostream& Instance::format(
             << "Number of groups:      " << number_of_groups() << std::endl
             << "Number of defects:     " << number_of_defects() << std::endl
             << "Unloading constraint:  " << unloading_constraint() << std::endl
+            << "Item spacing x:        " << parameters().item_spacing_x << std::endl
+            << "Item spacing y:        " << parameters().item_spacing_y << std::endl
             << "Total item area:       " << item_area() << std::endl
             << "Total item width:      " << total_item_width() << std::endl
             << "Total item height:     " << total_item_height() << std::endl
@@ -442,6 +444,8 @@ void Instance::write(
     }
     f_parameters << "NAME,VALUE" << std::endl
         << "objective," << objective() << std::endl
-        << "unloading_constraint," << unloading_constraint() << std::endl;
+        << "unloading_constraint," << unloading_constraint() << std::endl
+        << "item_spacing_x," << parameters().item_spacing_x << std::endl
+        << "item_spacing_y," << parameters().item_spacing_y << std::endl;
 
 }

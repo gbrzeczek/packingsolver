@@ -71,6 +71,9 @@ int main(int argc, char *argv[])
         ("objective,f", po::value<Objective>(), "Objective")
 
         ("unloading-constraint,", po::value<rectangle::UnloadingConstraint>(), "")
+        ("item-spacing-x", po::value<Length>(), "Spacing between items in the x direction")
+        ("item-spacing-y", po::value<Length>(), "Spacing between items in the y direction")
+        ("item-spacing", po::value<Length>(), "Spacing between items (same value for both x and y)")
 
         ("output,o", po::value<std::string>(), "Output path")
         ("certificate,c", po::value<std::string>(), "Certificate path")
@@ -171,6 +174,12 @@ int main(int argc, char *argv[])
         instance_builder.set_objective(vm["objective"].as<Objective>());
     if (vm.count("unloading-constraint"))
         instance_builder.set_unloading_constraint(vm["unloading-constraint"].as<UnloadingConstraint>());
+    if (vm.count("item-spacing"))
+        instance_builder.set_item_spacing(vm["item-spacing"].as<Length>());
+    if (vm.count("item-spacing-x"))
+        instance_builder.set_item_spacing_x(vm["item-spacing-x"].as<Length>());
+    if (vm.count("item-spacing-y"))
+        instance_builder.set_item_spacing_y(vm["item-spacing-y"].as<Length>());
 
     Instance instance = instance_builder.build();
 

@@ -431,6 +431,12 @@ void InstanceBuilder::read_parameters(
             std::stringstream ss(value);
             ss >> unloading_constraint;
             set_unloading_constraint(unloading_constraint);
+        } else if (name == "item_spacing_x") {
+            set_item_spacing_x((Length)std::stol(value));
+        } else if (name == "item_spacing_y") {
+            set_item_spacing_y((Length)std::stol(value));
+        } else if (name == "item_spacing") {
+            set_item_spacing((Length)std::stol(value));
         }
     }
 }

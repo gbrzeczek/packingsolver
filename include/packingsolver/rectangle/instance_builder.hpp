@@ -48,6 +48,15 @@ public:
 
     void set_unloading_constraint(UnloadingConstraint unloading_constraint) { instance_.parameters_.unloading_constraint = unloading_constraint; }
 
+    /** Set the spacing between items in the x direction. */
+    void set_item_spacing_x(Length item_spacing_x) { instance_.parameters_.item_spacing_x = item_spacing_x; }
+
+    /** Set the spacing between items in the y direction. */
+    void set_item_spacing_y(Length item_spacing_y) { instance_.parameters_.item_spacing_y = item_spacing_y; }
+
+    /** Set the spacing between items (same value for x and y). */
+    void set_item_spacing(Length item_spacing) { instance_.parameters_.item_spacing_x = item_spacing; instance_.parameters_.item_spacing_y = item_spacing; }
+
     /*
      * Set bin types
      */
