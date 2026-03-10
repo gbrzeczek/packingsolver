@@ -216,6 +216,7 @@ std::ostream& Instance::format(
             << std::setw(12) << "Cost"
             << std::setw(12) << "Copies"
             << std::setw(12) << "Copies min"
+            << std::setw(12) << "Weight"
             << std::endl
             << std::setw(12) << "--------"
             << std::setw(12) << "-----"
@@ -223,6 +224,7 @@ std::ostream& Instance::format(
             << std::setw(12) << "----"
             << std::setw(12) << "------"
             << std::setw(12) << "----------"
+            << std::setw(12) << "------"
             << std::endl;
         for (BinTypeId bin_type_id = 0;
                 bin_type_id < number_of_bin_types();
@@ -235,6 +237,7 @@ std::ostream& Instance::format(
                 << std::setw(12) << bin_type.cost
                 << std::setw(12) << bin_type.copies
                 << std::setw(12) << bin_type.copies_min
+                << std::setw(12) << bin_type.maximum_weight
                 << std::endl;
         }
 
@@ -356,7 +359,8 @@ void Instance::write(
         "PROFIT,"
         "COPIES,"
         "ORIENTED,"
-        "GROUP_ID" << std::endl;
+        "GROUP_ID,"
+        "WEIGHT" << std::endl;
     for (ItemTypeId item_type_id = 0;
             item_type_id < number_of_item_types();
             ++item_type_id) {
@@ -368,7 +372,8 @@ void Instance::write(
             << item_type.profit << ","
             << item_type.copies << ","
             << item_type.oriented << ","
-            << item_type.group_id << std::endl;
+            << item_type.group_id << ","
+            << item_type.weight << std::endl;
     }
 
     // Export bins.
@@ -385,7 +390,8 @@ void Instance::write(
         "HEIGHT,"
         "COST,"
         "COPIES,"
-        "COPIES_MIN" << std::endl;
+        "COPIES_MIN,"
+        "MAXIMUM_WEIGHT" << std::endl;
     for (BinTypeId bin_type_id = 0;
             bin_type_id < number_of_bin_types();
             ++bin_type_id) {
@@ -396,7 +402,8 @@ void Instance::write(
             << bin_type.rect.y << ","
             << bin_type.cost << ","
             << bin_type.copies << ","
-            << bin_type.copies_min << std::endl;
+            << bin_type.copies_min << ","
+            << bin_type.maximum_weight << std::endl;
     }
 
     // Export defects.

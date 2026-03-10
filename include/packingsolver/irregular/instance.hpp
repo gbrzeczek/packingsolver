@@ -28,11 +28,15 @@ struct Parameters
     /** Minimum distance between two items. */
     LengthDbl item_item_minimum_spacing = 0.0;
 
-    /** Minimum distance between and item and a bin. */
-    LengthDbl item_bin_minimum_spacing = 0.0;
-
     /** Scale value. */
     LengthDbl scale_value = std::numeric_limits<LengthDbl>::infinity();
+
+    /**
+     * Imposed Aspect ratio for the open dimension xy objective.
+     *
+     * If '-1', no aspect ratio is imposed.
+     */
+    LengthDbl open_dimension_xy_aspect_ratio = -1;
 };
 
 /**
@@ -43,14 +47,21 @@ struct Defect
     /** Shape. */
     ShapeWithHoles shape_orig;
 
+    /** Type of the defect. */
+    DefectTypeId type = -1;
+
+    /** Minimum distance between and item and the defect. */
+    LengthDbl item_defect_minimum_spacing = 0.0;
+
+    /*
+     * Computed attributes.
+     */
+
     /** Scaled shape. */
     ShapeWithHoles shape_scaled;
 
     /** Inflated (scaled) shape. */
     ShapeWithHoles shape_inflated;
-
-    /** Type of the defect. */
-    DefectTypeId type = -1;
 
     std::string to_string(Counter indentation) const;
 };
@@ -72,18 +83,21 @@ struct BinType
     /** Shape of the bin type. */
     Shape shape_orig;
 
-    /** Scaled shape. */
-    Shape shape_scaled;
-
     /** Defects of the bin type. */
     std::vector<Defect> defects;
 
-    /** Borders. */
-    std::vector<Defect> borders;
+    /** Minimum distance between and item and the bin. */
+    LengthDbl item_bin_minimum_spacing = 0.0;
 
     /*
      * Computed attributes.
      */
+
+    /** Scaled shape. */
+    Shape shape_scaled;
+
+    /** Borders. */
+    std::vector<Defect> borders;
 
     /** Area of the bin type. */
     AreaDbl area_orig = 0.0;
@@ -103,6 +117,7 @@ struct BinType
     /** Maximum y of the item type. */
     LengthDbl y_max;
 
+
     AreaDbl space() const { return area_orig; }
 
     AreaDbl packable_area(QualityRule quality_rule) const { (void)quality_rule; return 0; } // TODO
@@ -118,14 +133,19 @@ struct ItemShape
     /** Main shape. */
     ShapeWithHoles shape_orig;
 
+    /** Quality rule. */
+    QualityRule quality_rule = -1;
+
+    /*
+     * Computed attributes.
+     */
+
     /** Scaled shape. */
     ShapeWithHoles shape_scaled;
 
     /** Inflated (scaled) shape. */
     ShapeWithHoles shape_inflated;
 
-    /** Quality rule. */
-    QualityRule quality_rule = -1;
 
     bool check() const;
 
@@ -166,6 +186,7 @@ struct ItemType
 
     /** Area of the item type. */
     AreaDbl area_scaled = 0;
+
 
     AreaDbl space() const { return area_orig; }
 

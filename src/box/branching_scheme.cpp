@@ -80,10 +80,10 @@ void BranchingScheme::update_uncovered_item(
     //    << " ye " << ye
     //    << " zs " << zs
     //    << " ze " << ze << std::endl;
-    if (ys > uncovered_item.ye
-            || ye < uncovered_item.ys
-            || zs > uncovered_item.ze
-            || ze < uncovered_item.zs) {
+    if (ys >= uncovered_item.ye
+            || ye <= uncovered_item.ys
+            || zs >= uncovered_item.ze
+            || ze <= uncovered_item.zs) {
         uncovered_items.push_back(uncovered_item);
         return;
     }
@@ -165,64 +165,6 @@ void BranchingScheme::update_uncovered_item(
     }
 }
 
-void BranchingScheme::update_y_uncovered_item(
-        std::vector<YUncoveredItem>& y_uncovered_items,
-        const YUncoveredItem& y_uncovered_item,
-        Length ys,
-        Length ye,
-        Length zs,
-        Length ze) const
-{
-    if (ys >= y_uncovered_item.y
-            || ye < y_uncovered_item.y
-            || zs > y_uncovered_item.ze
-            || ze < y_uncovered_item.zs) {
-        y_uncovered_items.push_back(y_uncovered_item);
-        return;
-    }
-    bool has_z_low = (zs > y_uncovered_item.zs);
-    bool has_z_high = (ze < y_uncovered_item.ze);
-    if (has_z_low) {
-        YUncoveredItem y_uncovered_item_new = y_uncovered_item;
-        y_uncovered_item_new.ze = zs;
-        y_uncovered_items.push_back(y_uncovered_item_new);
-    }
-    if (has_z_high) {
-        YUncoveredItem y_uncovered_item_new = y_uncovered_item;
-        y_uncovered_item_new.zs = ze;
-        y_uncovered_items.push_back(y_uncovered_item_new);
-    }
-}
-
-void BranchingScheme::update_z_uncovered_item(
-        std::vector<ZUncoveredItem>& z_uncovered_items,
-        const ZUncoveredItem& z_uncovered_item,
-        Length ys,
-        Length ye,
-        Length zs,
-        Length ze) const
-{
-    if (zs >= z_uncovered_item.z
-            || ze < z_uncovered_item.z
-            || ys > z_uncovered_item.ye
-            || ye < z_uncovered_item.ys) {
-        z_uncovered_items.push_back(z_uncovered_item);
-        return;
-    }
-    bool has_y_low = (ys > z_uncovered_item.ys);
-    bool has_y_high = (ye < z_uncovered_item.ye);
-    if (has_y_low) {
-        ZUncoveredItem z_uncovered_item_new = z_uncovered_item;
-        z_uncovered_item_new.ye = ys;
-        z_uncovered_items.push_back(z_uncovered_item_new);
-    }
-    if (has_y_high) {
-        ZUncoveredItem z_uncovered_item_new = z_uncovered_item;
-        z_uncovered_item_new.ys = ye;
-        z_uncovered_items.push_back(z_uncovered_item_new);
-    }
-}
-
 BranchingScheme::Node BranchingScheme::child_tmp(
         const std::shared_ptr<Node>& pparent,
         const Insertion& insertion) const
@@ -254,27 +196,32 @@ BranchingScheme::Node BranchingScheme::child_tmp(
     const BinType& bin_type = instance.bin_type(bin_type_id);
     const ItemType& item_type = instance.item_type(insertion.item_type_id);
 
-    Length xj = item_type.x(insertion.rotation);
-    Length yj = item_type.y(insertion.rotation);
-    Length zj = item_type.z(insertion.rotation);
+    Box box = item_type.box.rotate(insertion.rotation);
     Length xs = insertion.x;
     Length ys = insertion.y;
     Length zs = insertion.z;
-    Length xe = xs + xj;
-    Length ye = ys + yj;
-    Length ze = zs + zj;
+    Length xe = xs + box.x;
+    Length ye = ys + box.y;
+    Length ze = zs + box.z;
     Length xi = bin_type.box.x;
     Length yi = bin_type.box.y;
     Length zi = bin_type.box.z;
-    Volume item_volume = xj * yj * zj;
-    if (insertion.z + zj > zi) {
+    Volume item_volume = box.volume();
+    if (insertion.z + box.z > zi) {
         throw std::runtime_error(
                 FUNC_SIGNATURE + "; "
                 "insertion.z: " + std::to_string(insertion.z)
-                + "; zj: " + std::to_string(zj)
+                + "; zj: " + std::to_string(box.z)
                 + "; zi: " + std::to_string(zi)
                 + ".");
     }
+
+    UncoveredItem new_uncovered_item;
+    new_uncovered_item.x = xe;
+    new_uncovered_item.ys = ys;
+    new_uncovered_item.ye = ye;
+    new_uncovered_item.zs = zs;
+    new_uncovered_item.ze = ze;
 
     // Update uncovered_items.
     if (insertion.new_bin > 0) {  // New bin.
@@ -287,65 +234,12 @@ BranchingScheme::Node BranchingScheme::child_tmp(
             uncovered_item.ze = bin_type.box.z;
             update_uncovered_item(node.uncovered_items, uncovered_item, ys, ye, zs, ze);
         }
-        {
-            YUncoveredItem y_uncovered_item;
-            y_uncovered_item.xs = 0;
-            y_uncovered_item.xe = bin_type.box.x;
-            y_uncovered_item.y = 0;
-            y_uncovered_item.zs = 0;
-            y_uncovered_item.ze = bin_type.box.z;
-            update_y_uncovered_item(node.y_uncovered_items, y_uncovered_item, ys, ye, zs, ze);
-        }
-        {
-            ZUncoveredItem z_uncovered_item;
-            z_uncovered_item.xs = 0;
-            z_uncovered_item.xe = bin_type.box.x;
-            z_uncovered_item.ys = 0;
-            z_uncovered_item.ye = bin_type.box.y;
-            z_uncovered_item.z = 0;
-            update_z_uncovered_item(node.z_uncovered_items, z_uncovered_item, ys, ye, zs, ze);
-        }
-    }
-
-    // Compute node.uncovered_item.
-    for (const UncoveredItem& uncovered_item: parent.uncovered_items)
-        update_uncovered_item(node.uncovered_items, uncovered_item, ys, ye, zs, ze);
-    {
-        UncoveredItem uncovered_item;
-        uncovered_item.x = xe;
-        uncovered_item.ys = ys;
-        uncovered_item.ye = ye;
-        uncovered_item.zs = zs;
-        uncovered_item.ze = ze;
-        node.uncovered_items.push_back(uncovered_item);
-    }
-
-    // Compute node.y_uncovered_item.
-    for (const YUncoveredItem& y_uncovered_item: parent.y_uncovered_items) {
-        update_y_uncovered_item(node.y_uncovered_items, y_uncovered_item, ys, ye, zs, ze);
-    }
-    {
-        YUncoveredItem y_uncovered_item;
-        y_uncovered_item.xs = xs;
-        y_uncovered_item.xe = xe;
-        y_uncovered_item.y = ye;
-        y_uncovered_item.zs = zs;
-        y_uncovered_item.ze = ze;
-        node.y_uncovered_items.push_back(y_uncovered_item);
-    }
-
-    // Compute node.z_uncovered_item.
-    for (ZUncoveredItem z_uncovered_item: parent.z_uncovered_items) {
-        update_z_uncovered_item(node.z_uncovered_items, z_uncovered_item, ys, ye, zs, ze);
-    }
-    {
-        ZUncoveredItem z_uncovered_item;
-        z_uncovered_item.xs = xs;
-        z_uncovered_item.xe = xe;
-        z_uncovered_item.ys = ys;
-        z_uncovered_item.ye = ye;
-        z_uncovered_item.z = ze;
-        node.z_uncovered_items.push_back(z_uncovered_item);
+        node.uncovered_items.push_back(new_uncovered_item);
+    } else {
+        // Compute node.uncovered_item.
+        for (const UncoveredItem& uncovered_item: parent.uncovered_items)
+            update_uncovered_item(node.uncovered_items, uncovered_item, ys, ye, zs, ze);
+        node.uncovered_items.push_back(new_uncovered_item);
     }
 
     // Compute item_number_of_copies, number_of_items, items_area,
@@ -425,12 +319,12 @@ const std::vector<BranchingScheme::Insertion>& BranchingScheme::insertions(
         const BinType& bin_type = instance.bin_type(bin_type_id);
 
         // For all y uncovered item.
-        for (ItemPos y_uncovered_item_pos = 0;
-                y_uncovered_item_pos < (ItemPos)parent->y_uncovered_items.size();
+        for (ItemPos y_uncovered_item_pos = -1;
+                y_uncovered_item_pos < (ItemPos)parent->uncovered_items.size();
                 ++y_uncovered_item_pos) {
             // For all z uncovered item.
-            for (ItemPos z_uncovered_item_pos = 0;
-                    z_uncovered_item_pos < (ItemPos)parent->z_uncovered_items.size();
+            for (ItemPos z_uncovered_item_pos = -1;
+                    z_uncovered_item_pos < (ItemPos)parent->uncovered_items.size();
                     ++z_uncovered_item_pos) {
                 // For all remaining items.
                 for (ItemTypeId item_type_id = 0;
@@ -443,7 +337,7 @@ const std::vector<BranchingScheme::Insertion>& BranchingScheme::insertions(
                         continue;
                     // For all valid rotations.
                     for (int rotation = 0; rotation < 6; ++rotation) {
-                        if (!instance.item_type(item_type_id).can_rotate(rotation))
+                        if (!item_type.can_rotate(rotation))
                             continue;
                         insertion_item(
                                 parent,
@@ -497,15 +391,15 @@ const std::vector<BranchingScheme::Insertion>& BranchingScheme::insertions(
             if (parent->item_number_of_copies[item_type_id] == item_type.copies)
                 continue;
             for (int rotation = 0; rotation < 6; ++rotation) {
-                if (!instance.item_type(item_type_id).can_rotate(rotation))
+                if (!item_type.can_rotate(rotation))
                     continue;
                 insertion_item(
                         parent,
                         item_type_id,
                         rotation,
                         new_bin,
-                        0,  // y_uncovered_item_pos
-                        0);  // z_uncovered_item_pos
+                        -1,  // y_uncovered_item_pos
+                        -1);  // z_uncovered_item_pos
             }
         }
     }
@@ -540,23 +434,14 @@ void BranchingScheme::insertion_item(
         instance.bin_type_id(parent->number_of_bins - 1):
         instance.bin_type_id(parent->number_of_bins);
     const BinType& bin_type = instance.bin_type(bin_type_id);
-    Length xj = item_type.x(rotation);
-    Length yj = item_type.y(rotation);
-    Length zj = item_type.z(rotation);
+    Box box = item_type.box.rotate(rotation);
     Length xi = bin_type.box.x;
     Length yi = bin_type.box.y;
     Length zi = bin_type.box.z;
-    Length zs = 0;
-    Length ys = 0;
-    if (new_bin == 0) {  // Same bin
-        ys = parent->y_uncovered_items[y_uncovered_item_pos].y;
-        zs = parent->z_uncovered_items[z_uncovered_item_pos].z;
-    } else {  // new bin.
-        ys = 0;
-        zs = 0;
-    }
-    Length ye = ys + yj;
-    Length ze = zs + zj;
+    Length ys = (y_uncovered_item_pos >= 0)? parent->uncovered_items[y_uncovered_item_pos].ye: 0;
+    Length zs = (z_uncovered_item_pos >= 0)? parent->uncovered_items[z_uncovered_item_pos].ze: 0;
+    Length ye = ys + box.y;
+    Length ze = zs + box.z;
     // Check bin y.
     if (ye > yi) {
         //std::cout << "ye " << ye << " > yi " << yi << std::endl;
@@ -577,20 +462,22 @@ void BranchingScheme::insertion_item(
     }
 
     // Check contact with y and z uncovered items.
-    if (new_bin == 0) {  // Same bin
-        if (ye <= parent->z_uncovered_items[z_uncovered_item_pos].ys) {
-            //std::cout << "ye " << ye << " <= zuys " << parent->z_uncovered_items[z_uncovered_item_pos].ys << std::endl;
+    if (z_uncovered_item_pos >= 0) {
+        if (ye <= parent->uncovered_items[z_uncovered_item_pos].ys) {
+            //std::cout << "ye " << ye << " <= zuys " << parent->uncovered_items[z_uncovered_item_pos].ys << std::endl;
             return;
         }
-        if (ys >= parent->z_uncovered_items[z_uncovered_item_pos].ye) {
-            //std::cout << "ys " << ys << " <= zuye " << parent->z_uncovered_items[z_uncovered_item_pos].ye << std::endl;
+        if (ys >= parent->uncovered_items[z_uncovered_item_pos].ye) {
+            //std::cout << "ys " << ys << " <= zuye " << parent->uncovered_items[z_uncovered_item_pos].ye << std::endl;
             return;
         }
-        if (ze <= parent->y_uncovered_items[y_uncovered_item_pos].zs) {
+    }
+    if (y_uncovered_item_pos >= 0) {
+        if (ze <= parent->uncovered_items[y_uncovered_item_pos].zs) {
             //std::cout << "ze " << ze << " <= yuzs " << parent->y_uncovered_items[y_uncovered_item_pos].zs << std::endl;
             return;
         }
-        if (zs >= parent->y_uncovered_items[y_uncovered_item_pos].ze) {
+        if (zs >= parent->uncovered_items[y_uncovered_item_pos].ze) {
             //std::cout << "zs " << zs << " <= yuze " << parent->y_uncovered_items[y_uncovered_item_pos].ze << std::endl;
             return;
         }
@@ -599,8 +486,6 @@ void BranchingScheme::insertion_item(
     // Compute xs.
     Length xs = 0;
     if (new_bin == 0) {
-        xs = std::max(xs, parent->y_uncovered_items[y_uncovered_item_pos].xs - xj);
-        xs = std::max(xs, parent->z_uncovered_items[z_uncovered_item_pos].xs - xj);
         for (const UncoveredItem& uncovered_item: parent->uncovered_items) {
             if (uncovered_item.ye <= ys || uncovered_item.ys >= ye)
                 continue;
@@ -610,7 +495,7 @@ void BranchingScheme::insertion_item(
                 xs = uncovered_item.x;
         }
     }
-    Length xe = xs + xj;
+    Length xe = xs + box.x;
 
     // Check bin x.
     if (xe > xi) {
@@ -619,21 +504,15 @@ void BranchingScheme::insertion_item(
     }
 
     // Check contact with y and z uncovered items.
-    if (new_bin == 0) {
-        if (xe <= parent->y_uncovered_items[y_uncovered_item_pos].xs) {
-            //std::cout << "xe " << xe << " <= yuxs " << parent->y_uncovered_items[y_uncovered_item_pos].xs << std::endl;
-            return;
-        }
-        if (xs >= parent->y_uncovered_items[y_uncovered_item_pos].xe) {
+    if (y_uncovered_item_pos >= 0) {
+        if (xs >= parent->uncovered_items[y_uncovered_item_pos].x) {
             //std::cout << "xs " << xs << " <= yuxe " << parent->y_uncovered_items[y_uncovered_item_pos].xe << std::endl;
             return;
         }
-        if (xe <= parent->z_uncovered_items[z_uncovered_item_pos].xs) {
-            //std::cout << "xe " << xe << " <= zuxs " << parent->z_uncovered_items[z_uncovered_item_pos].xs << std::endl;
-            return;
-        }
-        if (xs >= parent->z_uncovered_items[z_uncovered_item_pos].xe) {
-            //std::cout << "xs " << xs << " <= zuxe " << parent->z_uncovered_items[z_uncovered_item_pos].xe << std::endl;
+    }
+    if (z_uncovered_item_pos >= 0) {
+        if (xs >= parent->uncovered_items[z_uncovered_item_pos].x) {
+            //std::cout << "xs " << xs << " <= zuxe " << parent->uncovered_items[z_uncovered_item_pos].xe << std::endl;
             return;
         }
     }
@@ -780,7 +659,6 @@ Solution BranchingScheme::to_solution(
 
     Solution solution(instance());
     BinPos bin_pos = -1;
-    std::map<std::tuple<BinPos, Length, Length>, StackId> coord2stack;
     for (auto current_node: descendents) {
         const Instance& instance = this->instance(current_node->last_bin_direction);
         if (current_node->number_of_bins > solution.number_of_bins())
@@ -790,6 +668,9 @@ Solution BranchingScheme::to_solution(
         const ItemType& item_type = instance.item_type(current_node->item_type_id);
         Point bl_corner = convert_point_back(
                 {current_node->x, current_node->y, current_node->z},
+                current_node->last_bin_direction);
+        int original_rotation = get_flipped_rotation(
+                current_node->rotation,
                 current_node->last_bin_direction);
         //std::cout
         //    << " item_type_id " << current_node->item_type_id
@@ -805,7 +686,7 @@ Solution BranchingScheme::to_solution(
                 bin_pos,
                 current_node->item_type_id,
                 bl_corner,
-                current_node->rotation);
+                original_rotation);
     }
     return solution;
 }
@@ -846,15 +727,16 @@ nlohmann::json BranchingScheme::json_export_init() const
 
         json_items_init_ids_[item_type_id] = std::vector<Counter>(2);
         for (int rotation = 0; rotation < 6; ++rotation) {
-            if (!instance().item_type(item_type_id).can_rotate(rotation))
+            if (!item_type.can_rotate(rotation))
                 continue;
 
             json_items_init_ids_[item_type_id][rotation] = i;
+            Box box = item_type.box.rotate(rotation);
             json_init[i] = {
                 {"Type", "Box"},
-                {"X", item_type.x(rotation)},
-                {"Y", item_type.y(rotation)},
-                {"Z", item_type.z(rotation)},
+                {"X", box.x},
+                {"Y", box.y},
+                {"Z", box.z},
                 {"FillColor", "blue"},
             };
             i++;
@@ -941,32 +823,6 @@ std::ostream& packingsolver::box::operator<<(
     return os;
 }
 
-std::ostream& packingsolver::box::operator<<(
-        std::ostream& os,
-        const BranchingScheme::YUncoveredItem& y_uncovered_item)
-{
-    os << "y " << y_uncovered_item.y
-        << " xs " << y_uncovered_item.xs
-        << " xe " << y_uncovered_item.xe
-        << " zs " << y_uncovered_item.zs
-        << " ze " << y_uncovered_item.ze
-        ;
-    return os;
-}
-
-std::ostream& packingsolver::box::operator<<(
-        std::ostream& os,
-        const BranchingScheme::ZUncoveredItem& z_uncovered_item)
-{
-    os << "z " << z_uncovered_item.z
-        << " xs " << z_uncovered_item.xs
-        << " xe " << z_uncovered_item.xe
-        << " ys " << z_uncovered_item.ys
-        << " ye " << z_uncovered_item.ye
-        ;
-    return os;
-}
-
 bool BranchingScheme::UncoveredItem::operator==(
         const UncoveredItem& uncovered_item) const
 {
@@ -1023,12 +879,6 @@ std::ostream& packingsolver::box::operator<<(
     os << "- uncovered_items" << std::endl;
     for (const BranchingScheme::UncoveredItem& uncovered_item: node.uncovered_items)
         os << "  - " << uncovered_item << std::endl;
-    os << "- y_uncovered_items" << std::endl;
-    for (const BranchingScheme::YUncoveredItem& y_uncovered_item: node.y_uncovered_items)
-        os << "  - " << y_uncovered_item << std::endl;
-    os << "- z_uncovered_items" << std::endl;
-    for (const BranchingScheme::ZUncoveredItem& z_uncovered_item: node.z_uncovered_items)
-        os << "  - " << z_uncovered_item << std::endl;
 
     return os;
 }
